@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import FeedbackList from './pages/FeedbackList';
 import Analytics from './pages/Analytics';
 import AIInsights from './pages/AIInsights';
+import StaffTracking from './pages/StaffTracking';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -42,6 +43,7 @@ function App() {
         <Route path="feedback" element={<FeedbackList />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="insights" element={<AIInsights />} />
+        <Route path="staff" element={<StaffTracking />} />
       </Route>
       
       {/* Fallback */}

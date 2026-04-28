@@ -11,6 +11,7 @@ import AIInsights from './pages/AIInsights';
 import StaffTracking from './pages/StaffTracking';
 import Settings from './pages/Settings';
 import Landing from './pages/Landing';
+import FeedbackCapture from './pages/FeedbackCapture';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -34,6 +35,7 @@ function App() {
 
   return (
     <Routes>
+      <Route path="/capture/:businessId" element={<FeedbackCapture />} />
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       
       {/* Root Route: Landing if unauthenticated, Dashboard if authenticated */}

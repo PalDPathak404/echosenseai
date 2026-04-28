@@ -10,6 +10,7 @@ import Analytics from './pages/Analytics';
 import AIInsights from './pages/AIInsights';
 import StaffTracking from './pages/StaffTracking';
 import Settings from './pages/Settings';
+import Landing from './pages/Landing';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -35,12 +36,16 @@ function App() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       
-      {/* Protected Routes */}
+      {/* Root Route: Landing if unauthenticated, Dashboard if authenticated */}
       <Route 
         path="/" 
-        element={user ? <DashboardLayout /> : <Navigate to="/login" replace />}
+        element={user ? <DashboardLayout /> : <Landing />}
       >
-        <Route index element={<Dashboard />} />
+        {user && <Route index element={<Dashboard />} />}
+      </Route>
+
+      {/* Protected Dashboard Routes */}
+      <Route element={user ? <DashboardLayout /> : <Navigate to="/login" replace />}>
         <Route path="feedback" element={<FeedbackList />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="insights" element={<AIInsights />} />

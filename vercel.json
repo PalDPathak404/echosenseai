@@ -19,6 +19,10 @@
       "dest": "server/index.js"
     },
     {
+      "src": "/(sitemap\\.xml|robots\\.txt|favicon\\.svg)",
+      "dest": "client/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "client/$1",
       "continue": true

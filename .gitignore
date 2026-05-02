@@ -23,3 +23,7 @@ firebase-blueprint.json
 
 # Legacy
 real/
+
+# Documentation
+*.postman_collection.json
+*collection.json

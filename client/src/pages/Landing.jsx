@@ -52,6 +52,13 @@ export default function Landing() {
     <div ref={containerRef} className="h-[500vh] bg-zinc-950 text-zinc-50 selection:bg-zinc-800">
       <Helmet>
         <title>Klyvora AI | Intelligent Feedback Analysis</title>
+        <meta name="description" content="Transform raw customer feedback into actionable intelligence using advanced sentiment analysis and emotional tone detection." />
+        <meta property="og:title" content="Klyvora AI | Intelligent Feedback Analysis" />
+        <meta property="og:description" content="Transform raw customer feedback into actionable intelligence using advanced sentiment analysis and emotional tone detection." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://klyvora.com" />
+        <meta property="og:image" content="https://klyvora.com/og-image.jpg" />
+        <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
       
       {/* 

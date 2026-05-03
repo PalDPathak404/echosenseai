@@ -14,10 +14,33 @@ export default function Login() {
       setLoading(true);
       setError(null);
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      
+      let popupWindow = null;
+      const originalWindowOpen = window.open;
+      window.open = function (...args) {
+        popupWindow = originalWindowOpen.apply(this, args);
+        return popupWindow;
+      };
+
+      const pollTimer = setInterval(() => {
+        if (popupWindow && popupWindow.closed) {
+          clearInterval(pollTimer);
+          window.open = originalWindowOpen;
+          setLoading(false);
+        }
+      }, 500);
+
+      try {
+        await signInWithPopup(auth, provider);
+      } finally {
+        clearInterval(pollTimer);
+        window.open = originalWindowOpen;
+      }
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Authentication failed. Please try again.');
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Authentication failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

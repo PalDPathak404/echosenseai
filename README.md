@@ -81,10 +81,10 @@ echosenseai/
 
 ## Screen Previews
 
-![Dashboard Preview](https://drive.google.com/file/d/1XSy9zQ0rLuSmJVGDXtwooUsdnyfV1r-7/view?usp=sharing)
+![Dashboard Preview](https://drive.google.com/uc?export=view&id=1XSy9zQ0rLuSmJVGDXtwooUsdnyfV1r-7)
 *Real-time intelligence dashboard.*
 
-![Feedback Capture](https://drive.google.com/file/d/1WrLZ3z5PMKGu4bf_KWfq1vv3-tQZpofQ/view?usp=sharing)
+![Feedback Capture](https://drive.google.com/uc?export=view&id=1WrLZ3z5PMKGu4bf_KWfq1vv3-tQZpofQ)
 *Native voice and text feedback interface.*
 
 ---

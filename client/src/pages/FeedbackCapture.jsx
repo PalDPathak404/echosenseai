@@ -6,7 +6,7 @@ import { Mic, Square, CheckCircle2, AlertCircle, BrainCircuit, Moon, Sun } from 
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
 
-export default function FeedbackCapture() {
+export default function FeedbackCapture({ previewMode = false, previewConfig = null }) {
   const { businessId } = useParams();
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -36,19 +36,25 @@ export default function FeedbackCapture() {
   };
 
   useEffect(() => {
+    if (previewMode) {
+      setKioskConfig(previewConfig);
+      return;
+    }
     if (!businessId) return;
     const fetchBiz = async () => {
       try {
         const d = await getDoc(doc(db, 'businesses', businessId));
         if (d.exists()) {
-          setKioskConfig(d.data());
+          const data = d.data();
+          const brandingData = data.branding || {};
+          setKioskConfig({ ...data, ...brandingData });
         }
       } catch (err) {
         console.error("Config fetch error:", err);
       }
     };
     fetchBiz();
-  }, [businessId]);
+  }, [businessId, previewMode, previewConfig]);
 
   useEffect(() => {
     let timer;
@@ -214,7 +220,9 @@ export default function FeedbackCapture() {
           setPendingFeedback(payload);
           setAskingContact(true);
         } else {
-          await addDoc(collection(db, `businesses/${businessId}/feedbacks`), payload);
+          if (!previewMode) {
+            await addDoc(collection(db, `businesses/${businessId}/feedbacks`), payload);
+          }
           setDone(true);
         }
       } catch (dbErr) {
@@ -237,8 +245,9 @@ export default function FeedbackCapture() {
       if (!skipContact && contactInfo.trim()) {
         finalPayload.customerContact = contactInfo.trim();
       }
-
-      await addDoc(collection(db, `businesses/${businessId}/feedbacks`), finalPayload);
+      if (!previewMode) {
+        await addDoc(collection(db, `businesses/${businessId}/feedbacks`), finalPayload);
+      }
     } catch (e) {
       console.error("Feedback finalizing error:", e);
       setError("Failed to save securely to the database.");
@@ -249,9 +258,25 @@ export default function FeedbackCapture() {
     }
   };
 
+  const dynamicStyles = kioskConfig ? {
+    '--background': kioskConfig.backgroundColor || undefined,
+    '--foreground': kioskConfig.textColor || undefined,
+    '--card': kioskConfig.surfaceColor || undefined,
+    '--card-foreground': kioskConfig.textColor || undefined,
+    '--primary': kioskConfig.primaryColor || undefined,
+    '--primary-foreground': kioskConfig.buttonTextColor || undefined,
+    '--accent': kioskConfig.accentColor || undefined,
+    '--ring': kioskConfig.accentColor || undefined,
+    '--radius': kioskConfig.borderRadius || undefined,
+    'fontFamily': kioskConfig.bodyFont || undefined
+  } : {};
+
+  // Clean undefined
+  Object.keys(dynamicStyles).forEach(key => dynamicStyles[key] === undefined && delete dynamicStyles[key]);
+
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950 selection:bg-accent/20 relative">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 selection:bg-accent/20 relative" style={dynamicStyles}>
         <button onClick={toggleTheme} className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 transition-colors">
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
@@ -265,12 +290,16 @@ export default function FeedbackCapture() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-            className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100"
+            className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-primary/20"
           >
-            <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+            <CheckCircle2 className="w-10 h-10 text-primary" />
           </motion.div>
-          <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground">Thank you!</h2>
-          <p className="text-muted-foreground font-medium">Your feedback has been securely analyzed and relayed to the manager.</p>
+          <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground">
+            {kioskConfig?.thankyouHeadline || "Thank you!"}
+          </h2>
+          <p className="text-muted-foreground font-medium">
+            {kioskConfig?.thankyouDescription || "Your feedback has been securely analyzed and relayed to the manager."}
+          </p>
         </motion.div>
       </div>
     );
@@ -278,7 +307,7 @@ export default function FeedbackCapture() {
 
   if (askingContact) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4 selection:bg-accent/20 relative">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4 selection:bg-accent/20 relative" style={dynamicStyles}>
         <button onClick={toggleTheme} className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 transition-colors z-50">
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
@@ -322,7 +351,7 @@ export default function FeedbackCapture() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 selection:bg-accent/20 relative">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 selection:bg-accent/20 relative" style={dynamicStyles}>
       <Helmet>
         <title>Provide Feedback | Klyvora AI</title>
       </Helmet>
@@ -339,7 +368,11 @@ export default function FeedbackCapture() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-card rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-border p-10 w-full max-w-md text-center relative overflow-hidden"
       >
-        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+
+        {kioskConfig?.logoUrl && (
+          <img src={kioskConfig.logoUrl} alt="Brand Logo" className="h-12 w-auto mx-auto mb-6 object-contain" />
+        )}
 
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-3">
           {kioskConfig?.kioskTitle || "How was your experience?"}
@@ -387,20 +420,20 @@ export default function FeedbackCapture() {
                     <motion.div
                       animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
                       transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 bg-rose-500 rounded-full"
+                      className="absolute inset-0 bg-primary/40 rounded-full"
                     />
                     <motion.div
                       animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
                       transition={{ duration: 2, delay: 0.5, repeat: Infinity }}
-                      className="absolute inset-0 bg-rose-500 rounded-full"
+                      className="absolute inset-0 bg-primary/60 rounded-full"
                     />
                   </>
                 )}
                 <button
                   onClick={recording ? stopRecording : startRecording}
                   className={`relative z-10 w-28 h-28 rounded-full flex items-center justify-center transition-all duration-300 ${recording
-                    ? 'bg-rose-50 border-4 border-rose-500 text-rose-500 scale-110 shadow-[0_0_40px_rgba(244,63,94,0.3)]'
-                    : 'bg-foreground text-background hover:scale-105 shadow-[0_8px_30px_rgb(0,0,0,0.12)]'
+                      ? 'bg-card border-4 border-primary text-primary scale-110 shadow-[0_0_40px_rgba(var(--primary),0.3)]'
+                      : 'bg-primary text-primary-foreground hover:scale-105 shadow-[0_8px_30px_rgb(0,0,0,0.12)]'
                     }`}
                 >
                   {recording ? <Square className="w-10 h-10 fill-current" /> : <Mic className="w-12 h-12 stroke-[1.5]" />}
@@ -412,8 +445,8 @@ export default function FeedbackCapture() {
 
         <div className="mt-12 font-mono text-[13px] font-bold text-muted-foreground uppercase tracking-wider">
           {recording ? (
-            <span className="text-rose-500 flex items-center justify-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            <span className="text-primary flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               00:{time.toString().padStart(2, '0')} / 00:20
             </span>
           ) : "UP TO 20 SECONDS"}

@@ -152,15 +152,7 @@ export default function Settings() {
 
       <div className="pt-12 pb-4 text-center">
         <p className="text-muted-foreground text-sm font-medium tracking-wide flex items-center justify-center gap-1.5">
-          Created with <Heart className="w-4 h-4 text-red-500 fill-current" /> by{' '}
-          <a 
-            href="https://pal-pathak-sigma.vercel.app" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-foreground hover:underline hover:text-blue-600 transition-colors"
-          >
-            Pal Pathak
-          </a>
+          Made with <Heart className="w-4 h-4 text-red-500 fill-current" /> by Team Code Blooded
         </p>
       </div>
     </div>

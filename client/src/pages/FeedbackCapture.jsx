@@ -1,28 +1,27 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router';
-import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Mic, Square, CheckCircle2, AlertCircle, BrainCircuit, Moon, Sun } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Moon, Sun, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Helmet } from 'react-helmet-async';
 
+import VoiceRecorder from '../components/voice/VoiceRecorder';
+import TranscriptViewer from '../components/voice/TranscriptViewer';
+import AIInsightCards from '../components/voice/AIInsightCards';
+
 export default function FeedbackCapture({ previewMode = false, previewConfig = null }) {
   const { businessId } = useParams();
-  const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [done, setDone] = useState(false);
   const [askingContact, setAskingContact] = useState(false);
   const [contactInfo, setContactInfo] = useState('');
-  const [pendingFeedback, setPendingFeedback] = useState(null);
+  const [pendingPayload, setPendingPayload] = useState(null);
   const [kioskConfig, setKioskConfig] = useState(null);
   const [error, setError] = useState(null);
-  const [time, setTime] = useState(0);
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
-
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const recognitionRef = useRef(null);
-  const finalTranscriptRef = useRef('');
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [audioBase64, setAudioBase64] = useState(null);
 
   const toggleTheme = () => {
     const root = document.documentElement;
@@ -56,144 +55,63 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
     fetchBiz();
   }, [businessId, previewMode, previewConfig]);
 
-  useEffect(() => {
-    let timer;
-    if (recording) {
-      timer = setInterval(() => {
-        setTime(t => {
-          if (t >= 20) {
-            stopRecording();
-            return t;
-          }
-          return t + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [recording]);
-
-  const startRecording = async () => {
-    try {
-      setRecording(true);
-      setError(null);
-      setTime(0);
-      finalTranscriptRef.current = '';
-      audioChunksRef.current = [];
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      let mimeType = 'audio/webm';
-      if (MediaRecorder.isTypeSupported('audio/webm')) {
-        mimeType = 'audio/webm';
-      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        mimeType = 'audio/mp4';
-      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-        mimeType = 'audio/ogg';
-      }
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.resolvedMimeType = mimeType;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = processAudioAndText;
-      mediaRecorder.start();
-
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        recognitionRef.current.onresult = (event) => {
-          let tr = '';
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              tr += event.results[i][0].transcript;
-            }
-          }
-          if (tr) finalTranscriptRef.current += tr + ' ';
-        };
-        recognitionRef.current.start();
-      }
-    } catch (err) {
-      console.error("Microphone Access Error:", err);
-      setError(`Microphone access error: ${err.message || "Please allow access to leave feedback."}`);
-      setRecording(false);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    setRecording(false);
-  };
-
-    const processAudioAndText = async () => {
+  const handleVoiceSubmit = async (blob) => {
     setProcessing(true);
-    try {
-      const generatedMimeType = mediaRecorderRef.current?.resolvedMimeType || 'audio/webm';
-      const audioBlob = new Blob(audioChunksRef.current, { type: generatedMimeType });
-      const audioBase64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const split = reader.result.split(',');
-          let ext = 'webm';
-          if(generatedMimeType.includes('mp4')) ext = 'mp4';
-          if(generatedMimeType.includes('ogg')) ext = 'ogg';
+    setError(null);
 
-          resolve(`${ext}|${split[1] || split[0]}`);
-        };
-        reader.readAsDataURL(audioBlob);
-      });
-
-      let transcript = finalTranscriptRef.current.trim();
-      if (!transcript) {
-        transcript = "No clear audio transcribed.";
-      }
-
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          text: transcript,
-          audioBase64: audioBase64 
-        })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to analyze feedback natively.");
-      }
-
-      const analysis = await res.json();
-
+    // Convert blob to base64 to save in Firestore
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = async () => {
       try {
+        const base64data = reader.result;
+        const base64String = base64data.split(',')[1];
+        const ext = blob.type.split('/')[1] || 'webm';
+        const storedBase64 = `${ext}|${base64String}`;
+        setAudioBase64(storedBase64);
+
+        // Upload using FormData
+        const formData = new FormData();
+        formData.append('audio', blob, `feedback.${ext}`);
+
+        const res = await fetch("/api/voice/analyze", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to analyze feedback.");
+        }
+
+        const analysis = await res.json();
+        setAnalysisResult(analysis);
+
+        // Construct final payload
         const payload = {
-          text: analysis.text,
+          text: analysis.transcript, // standard text field
+          transcript: analysis.transcript,
+          language: analysis.language,
+          confidence: analysis.confidence,
           sentiment: analysis.sentiment,
-          emotion: analysis.emotion,
-          score: analysis.score,
-          topics: analysis.topics,
-          source: 'link',
+          urgency: analysis.urgency,
+          categories: analysis.categories,
+          positive_points: analysis.positive_points,
+          negative_points: analysis.negative_points,
+          summary: analysis.summary,
+          manager_action: analysis.manager_action,
+          escalation_required: analysis.escalation_required,
+          escalation_reason: analysis.escalation_reason,
+          keywords: analysis.keywords,
+          audioBase64: storedBase64,
+          source: 'qr',
           status: 'open',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         };
 
-        if (audioBase64) {
-          payload.audioBase64 = audioBase64;
-        }
-
         if (kioskConfig?.collectContact) {
-          setPendingFeedback(payload);
+          setPendingPayload(payload);
           setAskingContact(true);
         } else {
           if (!previewMode) {
@@ -201,38 +119,43 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
           }
           setDone(true);
         }
-      } catch (dbErr) {
-        console.error("Firestore Save Error:", dbErr);
-        throw new Error("Failed to save securely to the database: " + (dbErr?.message || "Unknown error"));
+      } catch (err) {
+        console.error("Feedback Capture Error:", err);
+        setError(err.message || "Failed to process voice feedback.");
+      } finally {
+        setProcessing(false);
       }
-    } catch (err) {
-      console.error("Feedback Processing Error:", err);
-      setError(err.message || "An error occurred while processing your feedback. Please try again.");
-    } finally {
-      setProcessing(false);
-    }
+    };
   };
 
   const finalizeFeedback = async (skipContact = false) => {
     setProcessing(true);
     try {
-      const finalPayload = { ...pendingFeedback };
-      
+      const finalPayload = { ...pendingPayload };
       if (!skipContact && contactInfo.trim()) {
         finalPayload.customerContact = contactInfo.trim();
       }
-      
       if (!previewMode) {
         await addDoc(collection(db, `businesses/${businessId}/feedbacks`), finalPayload);
       }
+      setDone(true);
     } catch (e) {
       console.error("Feedback finalizing error:", e);
       setError("Failed to save securely to the database.");
     } finally {
       setProcessing(false);
       setAskingContact(false);
-      setDone(true);
     }
+  };
+
+  const handleReset = () => {
+    setAnalysisResult(null);
+    setAudioBase64(null);
+    setDone(false);
+    setAskingContact(false);
+    setContactInfo('');
+    setPendingPayload(null);
+    setError(null);
   };
 
   const dynamicStyles = kioskConfig ? {
@@ -248,35 +171,72 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
     'fontFamily': kioskConfig.bodyFont || undefined
   } : {};
 
-  // Clean undefined
+  // Clean undefined keys
   Object.keys(dynamicStyles).forEach(key => dynamicStyles[key] === undefined && delete dynamicStyles[key]);
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4 selection:bg-accent/20 relative" style={dynamicStyles}>
-        <button onClick={toggleTheme} className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 transition-colors">
+      <div className="min-h-screen bg-slate-50 dark:bg-zinc-950 py-12 px-4 selection:bg-accent/20 relative flex items-center justify-center" style={dynamicStyles}>
+        <button onClick={toggleTheme} className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 transition-colors z-50">
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
+
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }} 
-          animate={{ opacity: 1, scale: 1 }} 
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="text-center p-8 max-w-sm"
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="w-full max-w-2xl space-y-6 text-center"
         >
-          <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-            className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-primary/20"
+          <div className="bg-card rounded-[2rem] border border-border p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500" />
+            
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+              className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 dark:border-emerald-900/50"
+            >
+              <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            </motion.div>
+            
+            <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground">
+              {kioskConfig?.thankyouHeadline || "Thank you for your feedback!"}
+            </h2>
+            <p className="text-muted-foreground font-medium text-sm max-w-md mx-auto">
+              {kioskConfig?.thankyouDescription || "Your voice feedback has been analyzed with AI and securely shared with the business manager."}
+            </p>
+          </div>
+
+          {/* Detailed analysis report shown to the user if available */}
+          {analysisResult && (
+            <div className="space-y-4">
+              <TranscriptViewer 
+                transcript={analysisResult.transcript}
+                language={analysisResult.language}
+                confidence={analysisResult.confidence}
+                positive_points={analysisResult.positive_points}
+                negative_points={analysisResult.negative_points}
+                keywords={analysisResult.keywords}
+              />
+
+              <AIInsightCards 
+                sentiment={analysisResult.sentiment}
+                urgency={analysisResult.urgency}
+                categories={analysisResult.categories}
+                summary={analysisResult.summary}
+                manager_action={analysisResult.manager_action}
+                escalation_required={analysisResult.escalation_required}
+                escalation_reason={analysisResult.escalation_reason}
+              />
+            </div>
+          )}
+
+          <button
+            onClick={handleReset}
+            type="button"
+            className="inline-flex items-center justify-center gap-2 h-11 px-6 rounded-xl bg-foreground text-background text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer mt-4"
           >
-            <CheckCircle2 className="w-10 h-10 text-primary" />
-          </motion.div>
-          <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground">
-            {kioskConfig?.thankyouHeadline || "Thank you!"}
-          </h2>
-          <p className="text-muted-foreground font-medium">
-            {kioskConfig?.thankyouDescription || "Your feedback has been securely analyzed and relayed to the manager."}
-          </p>
+            Leave another feedback <ArrowRight className="w-4 h-4" />
+          </button>
         </motion.div>
       </div>
     );
@@ -295,12 +255,12 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
         >
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground mb-2">Want a follow-up?</h2>
-          <p className="text-sm font-medium text-muted-foreground mb-8">Leave your email or number so we can get back to you.</p>
+          <p className="text-sm font-medium text-muted-foreground mb-8">Leave your email or number so the manager can get back to you.</p>
           
           <input 
             type="text" 
             placeholder="Email or Phone Number"
-            className="w-full h-12 px-4 rounded-xl border border-input bg-transparent text-sm mb-4 focus:ring-2 focus:ring-accent outline-none transition-all"
+            className="w-full h-12 px-4 rounded-xl border border-input bg-transparent text-sm mb-4 focus:ring-2 focus:ring-accent outline-none transition-all text-foreground"
             value={contactInfo}
             onChange={e => setContactInfo(e.target.value)}
             disabled={processing}
@@ -316,7 +276,7 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
             </button>
             <button 
               onClick={() => finalizeFeedback(false)}
-              className="flex-1 h-12 rounded-xl bg-foreground text-background text-sm font-semibold hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+              className="flex-1 h-12 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-zinc-950 text-sm font-semibold hover:opacity-90 transition-opacity"
               disabled={processing}
             >
               {processing ? 'Saving...' : 'Submit'}
@@ -336,10 +296,6 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
         {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
-      <div className="absolute top-6 left-6 text-xs text-muted-foreground opacity-50 font-mono hidden md:block">
-        Route: {businessId}
-      </div>
-
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -355,7 +311,7 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
           {kioskConfig?.kioskTitle || "How was your experience?"}
         </h1>
         <p className="text-[15px] font-medium text-muted-foreground mb-12">
-          {kioskConfig?.kioskMessage || "Tap the microphone and speak briefly."}
+          {kioskConfig?.kioskMessage || "Speak clearly in Hinglish, English, or Hindi."}
         </p>
 
         <AnimatePresence>
@@ -372,62 +328,12 @@ export default function FeedbackCapture({ previewMode = false, previewConfig = n
           )}
         </AnimatePresence>
 
-        <div className="h-56 flex flex-col items-center justify-center relative">
-          <AnimatePresence mode="wait">
-            {processing ? (
-              <motion.div 
-                key="processing"
-                initial={{ opacity: 0, scale: 0.9 }} 
-                animate={{ opacity: 1, scale: 1 }} 
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex flex-col items-center"
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 border-4 border-accent border-t-transparent rounded-full animate-spin w-16 h-16" />
-                  <div className="w-16 h-16 flex items-center justify-center text-accent">
-                    <BrainCircuit className="w-8 h-8 opacity-70 animate-pulse" />
-                  </div>
-                </div>
-                <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-accent mt-6">Analyzing Voice</p>
-              </motion.div>
-            ) : (
-              <motion.div key="recording" className="relative group flex items-center justify-center h-full w-full">
-                {recording && (
-                  <>
-                    <motion.div 
-                      animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }} 
-                      transition={{ duration: 2, repeat: Infinity }} 
-                      className="absolute inset-0 bg-primary/40 rounded-full" 
-                    />
-                    <motion.div 
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }} 
-                      transition={{ duration: 2, delay: 0.5, repeat: Infinity }} 
-                      className="absolute inset-0 bg-primary/60 rounded-full" 
-                    />
-                  </>
-                )}
-                <button
-                  onClick={recording ? stopRecording : startRecording}
-                  className={`relative z-10 w-28 h-28 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    recording 
-                      ? 'bg-card border-4 border-primary text-primary scale-110 shadow-[0_0_40px_rgba(var(--primary),0.3)]' 
-                      : 'bg-primary text-primary-foreground hover:scale-105 shadow-[0_8px_30px_rgb(0,0,0,0.12)]'
-                  }`}
-                >
-                  {recording ? <Square className="w-10 h-10 fill-current" /> : <Mic className="w-12 h-12 stroke-[1.5]" />}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <div className="mt-12 font-mono text-[13px] font-bold text-muted-foreground uppercase tracking-wider">
-          {recording ? (
-            <span className="text-primary flex items-center justify-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              00:{time.toString().padStart(2, '0')} / 00:20
-            </span>
-          ) : "UP TO 20 SECONDS"}
+        <div className="py-4">
+          <VoiceRecorder 
+            onSubmit={handleVoiceSubmit}
+            onReset={handleReset}
+            processing={processing}
+          />
         </div>
       </motion.div>
     </div>

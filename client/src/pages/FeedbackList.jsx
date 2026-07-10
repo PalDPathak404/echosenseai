@@ -5,21 +5,181 @@ import { db } from '../lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { AlertCircle, RefreshCw, Globe, ShieldAlert } from 'lucide-react';
+import { Play, Pause, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Star, Lightbulb, Target } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AudioPlayer from '../components/voice/AudioPlayer';
+import { getTemplate } from '../lib/templates';
+import { Button } from '@/components/ui/button';
 
-const URGENCY_COLORS = {
-  critical: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/50',
-  high: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-900/50',
-  medium: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50',
-  low: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/50'
-};
+function ExecutiveCard({ fb, businessId, members, updateStatus, updateAssignee, playAudio, playingId, audioSource }) {
+  const [expanded, setExpanded] = useState(false);
+  const template = getTemplate(fb.businessType || 'generic');
+  const TemplateIcon = template.icon;
+  
+  const isCritical = fb.businessImpact?.level === 'Critical' || fb.urgency === 'High' || fb.rating <= 2;
+
+  return (
+    <Card className={`p-0 overflow-hidden transition-all duration-300 hover:shadow-md border-l-4 ${isCritical ? 'border-l-red-500' : 'border-l-primary'}`}>
+      {/* Top Banner */}
+      <div className="bg-secondary/40 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between border-b border-border gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center shadow-sm">
+             <TemplateIcon className="w-6 h-6 text-foreground" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-lg">{fb.emotion || '😐 Neutral'}</h3>
+              {isCritical && <Badge variant="destructive" className="animate-pulse">Critical Priority</Badge>}
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+              <span className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                {fb.rating || 3}/5
+              </span>
+              <span>•</span>
+              <span>{fb.createdAt?.toDate ? format(fb.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}</span>
+              {fb.customerContact && (
+                <>
+                  <span>•</span>
+                  <span className="font-mono">{fb.customerContact}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Select value={fb.status} onValueChange={(val) => updateStatus(fb.id, val)}>
+            <SelectTrigger className="h-9 w-[130px] text-xs font-medium">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={fb.assigneeId || 'unassigned'} onValueChange={(val) => updateAssignee(fb.id, val)}>
+            <SelectTrigger className="h-9 w-[130px] text-xs font-medium">
+              <SelectValue placeholder="Assign" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {members.map(m => (
+                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Main Body */}
+      <div className="p-6">
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6">
+            <div>
+              <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                 Executive Summary
+              </h4>
+              <p className="text-base leading-relaxed font-medium">
+                {fb.executiveSummary || fb.text}
+              </p>
+            </div>
+            
+            {fb.rootCause && (
+              <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30">
+                <h4 className="text-xs uppercase font-bold tracking-wider text-red-600 dark:text-red-400 mb-1 flex items-center gap-2">
+                  <Target className="w-3.5 h-3.5" /> Root Cause
+                </h4>
+                <p className="text-sm text-red-900 dark:text-red-200">{fb.rootCause}</p>
+              </div>
+            )}
+
+            {fb.recommendation && fb.recommendation.length > 0 && (
+              <div>
+                <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                  <Lightbulb className="w-3.5 h-3.5" /> Recommended Actions
+                </h4>
+                <ul className="space-y-2">
+                  {fb.recommendation.map((rec, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                      <span className="text-muted-foreground">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+               <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-2">Detected Themes</h4>
+               <div className="flex flex-wrap gap-2">
+                 {(fb.detectedCategories || fb.topics || []).map((t, i) => (
+                   <Badge key={i} variant="secondary" className="font-normal">{t}</Badge>
+                 ))}
+               </div>
+            </div>
+            
+            {fb.businessImpact && (
+              <div>
+                <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-2">Business Impact</h4>
+                <p className="text-sm">
+                   <span className="font-semibold text-foreground">{fb.businessImpact.level || 'Medium'}</span>: {fb.businessImpact.explanation}
+                </p>
+              </div>
+            )}
+
+            {fb.confidence && (
+              <div>
+                <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-1">AI Confidence</h4>
+                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                  <div className="bg-primary h-full" style={{ width: `${fb.confidence}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Expandable Transcript & Audio */}
+        <div className="mt-8 pt-4 border-t border-border">
+          <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {expanded ? "Hide raw transcript" : "Show raw customer feedback"}
+          </button>
+          
+          {expanded && (
+            <div className="mt-4 bg-secondary/30 p-4 rounded-xl text-sm leading-relaxed border border-border">
+              {fb.audioBase64 && (
+                <div className="flex items-center gap-3 mb-3 pb-3 border-b border-border/50">
+                  <Button 
+                    size="sm"
+                    variant={playingId === fb.id ? "destructive" : "default"}
+                    onClick={() => playAudio(fb.id, fb.audioBase64)}
+                    className="gap-2 rounded-full h-8 px-4"
+                  >
+                    {playingId === fb.id ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    {playingId === fb.id ? "Pause Audio" : "Play Original Audio"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">Original voice recording</span>
+                </div>
+              )}
+              <p className="font-mono text-muted-foreground">"{fb.text}"</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 
 export default function FeedbackList() {
   const { businessId } = useOutletContext();
   const [feedbacks, setFeedbacks] = useState([]);
   const [members, setMembers] = useState([]);
+  const [playingId, setPlayingId] = useState(null);
+  const [audioSource, setAudioSource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -74,177 +234,90 @@ export default function FeedbackList() {
     fetchData();
   };
 
+  const playAudio = async (id, base64) => {
+    if (playingId === id && audioSource) {
+      audioSource.pause();
+      setPlayingId(null);
+      return;
+    }
+    
+    if (audioSource) audioSource.pause();
+
+    try {
+      const parts = base64.split('|');
+      let ext = 'webm';
+      let pureBase64 = base64;
+      
+      if (parts.length > 1) {
+        ext = parts[0];
+        pureBase64 = parts[1];
+      }
+
+      const res = await fetch(`data:audio/${ext};base64,${pureBase64}`).catch(() => null);
+      if (!res) throw new Error("Fetch failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const audio = new Audio(url);
+      audio.onended = () => {
+        setPlayingId(null);
+        URL.revokeObjectURL(url);
+      };
+      
+      audio.onerror = () => {
+         const fallbackAudio = new Audio(`data:audio/webm;base64,${base64}`);
+         fallbackAudio.onended = () => setPlayingId(null);
+         fallbackAudio.play().catch(e => setPlayingId(null));
+         setAudioSource(fallbackAudio);
+      };
+
+      await audio.play();
+      setAudioSource(audio);
+      setPlayingId(id);
+    } catch (err) {
+      const fallbackAudio = new Audio(`data:audio/mp3;base64,${base64}`);
+      fallbackAudio.onended = () => setPlayingId(null);
+      fallbackAudio.play().catch(e => setPlayingId(null));
+      setAudioSource(fallbackAudio);
+      setPlayingId(id);
+    }
+  };
+
   if (loading) {
-    return <div className="text-sm font-medium text-muted-foreground">Loading feedback...</div>;
+    return <div className="text-sm font-medium text-muted-foreground p-8">Loading executive insights...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold tracking-tight">Feedback Inbox</h2>
-          <p className="text-muted-foreground">Manage and resolve customer experiences.</p>
+          <h2 className="text-3xl font-semibold tracking-tight">Executive Inbox</h2>
+          <p className="text-muted-foreground">Actionable insights generated from customer feedback.</p>
         </div>
         <button 
           onClick={handleRefresh}
           disabled={refreshing}
-          type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary transition-all active:scale-95 self-start cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary transition-all active:scale-95 self-start"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
-      <div className="space-y-4">
-        {feedbacks.map((fb) => {
-          const categories = fb.categories || fb.topics || [];
-          const keywords = fb.keywords || [];
-          
-          return (
-            <Card key={fb.id} className="p-6 transition-colors hover:bg-secondary/30">
-              <div className="flex flex-col md:flex-row md:gap-8">
-                {/* Score Column */}
-                <div className="flex-shrink-0 flex md:flex-col items-center gap-4 md:w-28 mb-4 md:mb-0 pb-4 md:pb-0 border-b md:border-b-0 md:border-r border-border justify-center">
-                  <div className="text-center">
-                    <div className="text-3xl font-light leading-none">{fb.score || 50}</div>
-                    <div className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mt-1">Score</div>
-                  </div>
-                </div>
-
-                {/* Content Column */}
-                <div className="flex-1 space-y-4 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Sentiment Badge */}
-                    <Badge variant={fb.sentiment === 'positive' ? 'default' : fb.sentiment === 'negative' ? 'destructive' : 'secondary'} className="font-semibold uppercase text-[10px]">
-                      {fb.sentiment || 'neutral'}
-                    </Badge>
-                    
-                    {/* Urgency Badge */}
-                    {fb.urgency && (
-                      <Badge variant="outline" className={`font-semibold capitalize text-[10px] ${URGENCY_COLORS[fb.urgency.toLowerCase()] || URGENCY_COLORS.low}`}>
-                        {fb.urgency}
-                      </Badge>
-                    )}
-
-                    {/* Detected Language Badge */}
-                    {fb.language && (
-                      <Badge variant="outline" className="bg-transparent text-muted-foreground border-border text-[10px] font-semibold flex items-center gap-1">
-                        <Globe className="w-3.5 h-3.5" />
-                        {fb.language}
-                      </Badge>
-                    )}
-
-                    <Badge variant="outline" className="bg-transparent capitalize text-[10px] font-semibold">{fb.emotion || 'neutral'}</Badge>
-                    
-                    <span className="text-xs text-muted-foreground">
-                      {fb.createdAt?.toDate ? format(fb.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
-                    </span>
-
-                    {/* Escalation Required indicator */}
-                    {fb.escalation_required && (
-                      <span className="flex items-center text-xs text-red-500 font-semibold ml-auto gap-1">
-                        <ShieldAlert className="w-4 h-4" />
-                        Escalated
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    <p className="text-foreground text-base md:text-lg font-medium leading-relaxed italic">
-                      "{fb.transcript || fb.text}"
-                    </p>
-
-                    {/* Reusable Audio Player */}
-                    {fb.audioBase64 && (
-                      <div className="w-full max-w-md mt-1">
-                        <AudioPlayer base64={fb.audioBase64} />
-                      </div>
-                    )}
-
-                    {/* AI Feedback Summary */}
-                    {fb.summary && fb.summary !== (fb.transcript || fb.text) && (
-                      <div className="text-xs text-muted-foreground leading-relaxed bg-secondary/20 p-3 rounded-xl border border-border/40 max-w-2xl">
-                        <strong className="text-foreground text-[10px] uppercase block mb-1">AI Summary</strong>
-                        {fb.summary}
-                      </div>
-                    )}
-
-                    {/* Recommended Action */}
-                    {fb.manager_action && (
-                      <div className="p-3 bg-secondary/35 rounded-xl border border-border text-xs max-w-2xl">
-                        <span className="font-bold text-[10px] uppercase text-muted-foreground block mb-1">Recommended Action</span>
-                        <span className="text-foreground leading-relaxed">{fb.manager_action}</span>
-                      </div>
-                    )}
-
-                    {/* Escalation Reason */}
-                    {fb.escalation_required && fb.escalation_reason && (
-                      <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 rounded-xl text-xs max-w-2xl text-rose-800 dark:text-rose-400">
-                        <span className="font-bold text-[10px] uppercase block mb-1">Escalation Reason</span>
-                        <span className="leading-relaxed font-semibold">{fb.escalation_reason}</span>
-                      </div>
-                    )}
-
-                    {/* Customer Contact */}
-                    {fb.customerContact && (
-                      <div className="flex items-center text-xs font-semibold text-muted-foreground bg-secondary/50 w-fit px-3 py-1.5 rounded-md border border-border">
-                        <span className="mr-2 text-[9px] uppercase font-bold tracking-wider opacity-70">Contact:</span> 
-                        {fb.customerContact}
-                      </div>
-                    )}
-
-                    {/* Categories and Keywords */}
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      {categories.map((topic) => (
-                        <span key={topic} className="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-[10px] font-bold uppercase tracking-wider">
-                          {topic}
-                        </span>
-                      ))}
-                      {keywords.map((kw) => (
-                        <span key={kw} className="text-slate-400 dark:text-zinc-500 text-xs font-medium">
-                          #{kw}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Column */}
-                <div className="flex-shrink-0 md:w-48 pl-0 md:pl-4 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 space-y-4">
-                  <div>
-                    <div className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">Status</div>
-                    <Select value={fb.status || 'open'} onValueChange={(val) => updateStatus(fb.id, val)}>
-                      <SelectTrigger className="h-8 text-xs font-medium">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="resolved">Resolved</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <div className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">Assignee</div>
-                    <Select value={fb.assigneeId || 'unassigned'} onValueChange={(val) => updateAssignee(fb.id, val)}>
-                      <SelectTrigger className="h-8 text-xs font-medium">
-                        <SelectValue placeholder="Assign Staff" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                        {members.map(m => (
-                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
+      <div className="space-y-6">
+        {feedbacks.map((fb) => (
+          <ExecutiveCard 
+            key={fb.id} 
+            fb={fb} 
+            businessId={businessId} 
+            members={members} 
+            updateStatus={updateStatus} 
+            updateAssignee={updateAssignee} 
+            playAudio={playAudio} 
+            playingId={playingId} 
+            audioSource={audioSource} 
+          />
+        ))}
 
         {feedbacks.length === 0 && (
           <div className="text-center py-16 px-4 bg-card rounded-lg border border-dashed border-border">

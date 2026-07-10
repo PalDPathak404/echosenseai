@@ -130,7 +130,7 @@ export default function FeedbackCapture() {
     setRecording(false);
   };
 
-    const processAudioAndText = async () => {
+  const processAudioAndText = async () => {
     setProcessing(true);
     try {
       const generatedMimeType = mediaRecorderRef.current?.resolvedMimeType || 'audio/webm';
@@ -140,8 +140,8 @@ export default function FeedbackCapture() {
         reader.onloadend = () => {
           const split = reader.result.split(',');
           let ext = 'webm';
-          if(generatedMimeType.includes('mp4')) ext = 'mp4';
-          if(generatedMimeType.includes('ogg')) ext = 'ogg';
+          if (generatedMimeType.includes('mp4')) ext = 'mp4';
+          if (generatedMimeType.includes('ogg')) ext = 'ogg';
 
           resolve(`${ext}|${split[1] || split[0]}`);
         };
@@ -156,9 +156,15 @@ export default function FeedbackCapture() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           text: transcript,
-          audioBase64: audioBase64 
+          audioBase64: audioBase64,
+          // Pass organization context so the Intelligence Agent can
+          // scope memory, retrieve relevant knowledge, and track patterns
+          organizationId: businessId || null,
+          organizationName: kioskConfig?.name || kioskConfig?.kioskTitle || 'Unknown Organization',
+          source: 'link',
+          template: kioskConfig || null,
         })
       });
 
@@ -171,6 +177,7 @@ export default function FeedbackCapture() {
 
       try {
         const payload = {
+          // Core fields (backward-compatible)
           text: analysis.text,
           sentiment: analysis.sentiment,
           emotion: analysis.emotion,
@@ -179,7 +186,24 @@ export default function FeedbackCapture() {
           source: 'link',
           status: 'open',
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          // Extended intelligence from Customer Intelligence Agent
+          ...(analysis.summary && { summary: analysis.summary }),
+          ...(analysis.priority && { priority: analysis.priority }),
+          ...(analysis.urgency && { urgency: analysis.urgency }),
+          ...(analysis.riskLevel && { riskLevel: analysis.riskLevel }),
+          ...(analysis.businessImpact && { businessImpact: analysis.businessImpact }),
+          ...(analysis.detectedLanguage && { detectedLanguage: analysis.detectedLanguage }),
+          ...(analysis.confidence !== undefined && { confidence: analysis.confidence }),
+          ...(analysis.recurringPattern !== undefined && { recurringPattern: analysis.recurringPattern }),
+          ...(analysis.recommendation && {
+            aiRecommendationId: analysis.recommendation?.id,
+            aiRecommendationTitle: analysis.recommendation?.title,
+            aiRecommendation: analysis.recommendation?.recommendation,
+            immediateActions: analysis.recommendation?.immediateActions || [],
+          }),
+          // Execution traceability
+          ...(analysis._meta?.executionId && { aiExecutionId: analysis._meta.executionId }),
         };
 
         if (audioBase64) {
@@ -209,11 +233,11 @@ export default function FeedbackCapture() {
     setProcessing(true);
     try {
       const finalPayload = { ...pendingFeedback };
-      
+
       if (!skipContact && contactInfo.trim()) {
         finalPayload.customerContact = contactInfo.trim();
       }
-      
+
       await addDoc(collection(db, `businesses/${businessId}/feedbacks`), finalPayload);
     } catch (e) {
       console.error("Feedback finalizing error:", e);
@@ -231,13 +255,13 @@ export default function FeedbackCapture() {
         <button onClick={toggleTheme} className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 transition-colors">
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }} 
-          animate={{ opacity: 1, scale: 1 }} 
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
           className="text-center p-8 max-w-sm"
         >
-          <motion.div 
+          <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
@@ -258,7 +282,7 @@ export default function FeedbackCapture() {
         <button onClick={toggleTheme} className="absolute top-6 right-6 p-2 rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-neutral-600 dark:text-neutral-400 transition-colors z-50">
           {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-card rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-border p-10 w-full max-w-md text-center relative overflow-hidden"
@@ -266,25 +290,25 @@ export default function FeedbackCapture() {
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground mb-2">Want a follow-up?</h2>
           <p className="text-sm font-medium text-muted-foreground mb-8">Leave your email or number so we can get back to you.</p>
-          
-          <input 
-            type="text" 
+
+          <input
+            type="text"
             placeholder="Email or Phone Number"
             className="w-full h-12 px-4 rounded-xl border border-input bg-transparent text-sm mb-4 focus:ring-2 focus:ring-accent outline-none transition-all"
             value={contactInfo}
             onChange={e => setContactInfo(e.target.value)}
             disabled={processing}
           />
-          
+
           <div className="flex gap-3">
-            <button 
+            <button
               onClick={() => finalizeFeedback(true)}
               className="flex-1 h-12 rounded-xl border border-border text-foreground text-sm font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
               disabled={processing}
             >
               Skip
             </button>
-            <button 
+            <button
               onClick={() => finalizeFeedback(false)}
               className="flex-1 h-12 rounded-xl bg-foreground text-background text-sm font-semibold hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
               disabled={processing}
@@ -310,13 +334,13 @@ export default function FeedbackCapture() {
         Route: {businessId}
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-card rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-border p-10 w-full max-w-md text-center relative overflow-hidden"
       >
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
-        
+
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-3">
           {kioskConfig?.kioskTitle || "How was your experience?"}
         </h1>
@@ -326,10 +350,10 @@ export default function FeedbackCapture() {
 
         <AnimatePresence>
           {error && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }} 
-              animate={{ opacity: 1, height: 'auto' }} 
-              exit={{ opacity: 0, height: 0 }} 
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-3 text-rose-600 bg-rose-50 border border-rose-100 p-4 rounded-xl text-sm mb-8 text-left"
             >
               <AlertCircle className="w-5 h-5 shrink-0" />
@@ -341,10 +365,10 @@ export default function FeedbackCapture() {
         <div className="h-56 flex flex-col items-center justify-center relative">
           <AnimatePresence mode="wait">
             {processing ? (
-              <motion.div 
+              <motion.div
                 key="processing"
-                initial={{ opacity: 0, scale: 0.9 }} 
-                animate={{ opacity: 1, scale: 1 }} 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="flex flex-col items-center"
               >
@@ -360,25 +384,24 @@ export default function FeedbackCapture() {
               <motion.div key="recording" className="relative group flex items-center justify-center h-full w-full">
                 {recording && (
                   <>
-                    <motion.div 
-                      animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }} 
-                      transition={{ duration: 2, repeat: Infinity }} 
-                      className="absolute inset-0 bg-rose-500 rounded-full" 
+                    <motion.div
+                      animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 bg-rose-500 rounded-full"
                     />
-                    <motion.div 
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }} 
-                      transition={{ duration: 2, delay: 0.5, repeat: Infinity }} 
-                      className="absolute inset-0 bg-rose-500 rounded-full" 
+                    <motion.div
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0, 0.3] }}
+                      transition={{ duration: 2, delay: 0.5, repeat: Infinity }}
+                      className="absolute inset-0 bg-rose-500 rounded-full"
                     />
                   </>
                 )}
                 <button
                   onClick={recording ? stopRecording : startRecording}
-                  className={`relative z-10 w-28 h-28 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    recording 
-                      ? 'bg-rose-50 border-4 border-rose-500 text-rose-500 scale-110 shadow-[0_0_40px_rgba(244,63,94,0.3)]' 
-                      : 'bg-foreground text-background hover:scale-105 shadow-[0_8px_30px_rgb(0,0,0,0.12)]'
-                  }`}
+                  className={`relative z-10 w-28 h-28 rounded-full flex items-center justify-center transition-all duration-300 ${recording
+                    ? 'bg-rose-50 border-4 border-rose-500 text-rose-500 scale-110 shadow-[0_0_40px_rgba(244,63,94,0.3)]'
+                    : 'bg-foreground text-background hover:scale-105 shadow-[0_8px_30px_rgb(0,0,0,0.12)]'
+                    }`}
                 >
                   {recording ? <Square className="w-10 h-10 fill-current" /> : <Mic className="w-12 h-12 stroke-[1.5]" />}
                 </button>

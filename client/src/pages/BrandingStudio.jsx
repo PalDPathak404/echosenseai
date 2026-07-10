@@ -39,6 +39,11 @@ const DEFAULT_CONFIG = {
   
   // Options
   collectContact: false,
+  
+  // Enterprise Settings
+  businessType: 'generic',
+  googleReviewLink: '',
+  voiceFeedbackRequired: 'conditional', // conditional | always | optional
 };
 
 export default function BrandingStudio() {
@@ -100,6 +105,9 @@ export default function BrandingStudio() {
           bodyFont:             config.bodyFont             ?? 'Inter, sans-serif',
           thankyouHeadline:     config.thankyouHeadline     ?? 'Thank you!',
           thankyouDescription:  config.thankyouDescription  ?? 'Your feedback has been securely analyzed and relayed to the manager.',
+          businessType:         config.businessType         ?? 'generic',
+          googleReviewLink:     config.googleReviewLink     ?? '',
+          voiceFeedbackRequired:config.voiceFeedbackRequired?? 'conditional',
         },
         kioskTitle:           config.kioskTitle           ?? 'How was your experience?',
         kioskMessage:         config.kioskMessage         ?? 'Tap the microphone and speak briefly.',

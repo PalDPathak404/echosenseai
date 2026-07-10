@@ -1,18 +1,60 @@
+import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router';
 import { Link } from 'react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, ExternalLink, ShieldCheck, Paintbrush, ArrowRight, Heart } from 'lucide-react';
+import { Copy, ExternalLink, ShieldCheck, Paintbrush, ArrowRight, Heart, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Helmet } from 'react-helmet-async';
-
-
+import { toast } from 'sonner';
+import { BUSINESS_TEMPLATES } from '../lib/templates';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function Settings() {
   const { businessId } = useOutletContext();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [config, setConfig] = useState({
+    businessType: 'generic',
+    googleReviewLink: '',
+    voiceFeedbackRequired: 'conditional'
+  });
+
+  useEffect(() => {
+    if (!businessId) return;
+    const fetchSettings = async () => {
+      try {
+        const d = await getDoc(doc(db, 'businesses', businessId));
+        if (d.exists()) {
+          const data = d.data();
+          const branding = data.branding || {};
+          setConfig({
+            businessType: branding.businessType || 'generic',
+            googleReviewLink: branding.googleReviewLink || '',
+            voiceFeedbackRequired: branding.voiceFeedbackRequired || 'conditional'
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [businessId]);
 
   if (!businessId) return null;
 
@@ -20,6 +62,29 @@ export default function Settings() {
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(captureUrl);
+    toast.success("Copied to clipboard");
+  };
+
+  const handleUpdate = (key, value) => {
+    setConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'businesses', businessId), {
+        'branding.businessType': config.businessType,
+        'branding.googleReviewLink': config.googleReviewLink,
+        'branding.voiceFeedbackRequired': config.voiceFeedbackRequired,
+        updatedAt: serverTimestamp()
+      });
+      toast.success("Business settings saved successfully");
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -33,6 +98,82 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        
+        {/* Business Settings Card */}
+        <Card className="md:col-span-2 border shadow-sm">
+          <CardHeader>
+            <CardTitle>Business Configuration</CardTitle>
+            <CardDescription>
+              Select your business type to automatically apply the correct templates, AI prompts, and customer experience flow.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {loading ? (
+              <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <>
+                <div className="space-y-2 max-w-md">
+                  <Label>Business Type</Label>
+                  <Select value={config.businessType} onValueChange={(v) => handleUpdate('businessType', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select business type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Industries</SelectLabel>
+                        {Object.values(BUSINESS_TEMPLATES).map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This changes the questions asked, the UI icon, and how the AI analyzes your feedback.
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-w-md">
+                  <Label>Google Review Link (Optional)</Label>
+                  <Input 
+                    placeholder="https://g.page/r/..." 
+                    value={config.googleReviewLink} 
+                    onChange={(e) => handleUpdate('googleReviewLink', e.target.value)} 
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    If provided, customers who leave a 5-star rating will be prompted to leave a Google Review.
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-w-md">
+                  <Label>Voice Feedback Rules</Label>
+                  <Select value={config.voiceFeedbackRequired} onValueChange={(v) => handleUpdate('voiceFeedbackRequired', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select rule" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="conditional">Conditional (Required for 1-2 stars only)</SelectItem>
+                      <SelectItem value="always">Always Required</SelectItem>
+                      <SelectItem value="optional">Always Optional</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Control when customers are forced to leave voice or text feedback.
+                  </p>
+                </div>
+              </>
+            )}
+          </CardContent>
+          <CardFooter className="bg-secondary/20 justify-end border-t">
+            <Button onClick={handleSaveSettings} disabled={loading || saving} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Configuration
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Feedback Channel Card */}
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Feedback Channel</CardTitle>

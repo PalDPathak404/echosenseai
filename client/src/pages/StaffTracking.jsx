@@ -133,7 +133,7 @@ export default function StaffTracking() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 pb-10 max-w-6xl">
       <Helmet>
-        <title>Staff Tracking | Klyvora AI</title>
+        <title>Staff Tracking | Shruviq</title>
       </Helmet>
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>

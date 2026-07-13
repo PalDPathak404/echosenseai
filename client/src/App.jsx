@@ -30,7 +30,7 @@ function App() {
   if (loading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-        <div className="text-sm font-medium text-slate-500 animate-pulse">Initializing Klyvora...</div>
+        <div className="text-sm font-medium text-slate-500 animate-pulse">Initializing Shruviq...</div>
       </div>
     );
   }

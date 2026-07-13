@@ -167,7 +167,7 @@ export default function BrandingStudio() {
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)]">
       <Helmet>
-        <title>Branding Studio | Klyvora AI</title>
+        <title>Branding Studio | Shruviq</title>
       </Helmet>
       
       {/* Studio Header */}

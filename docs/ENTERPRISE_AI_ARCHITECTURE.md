@@ -1,4 +1,4 @@
-# KlyvoraAI — Enterprise Intelligence Architecture
+# Shruviq — Enterprise Intelligence Architecture
 
 **Version:** 2.0.0  
 **Branch:** `feature/enterprise-ai-agent`  
@@ -8,7 +8,7 @@
 
 ## Overview
 
-KlyvoraAI is an **Enterprise Customer Intelligence Platform**. It is **not** a chatbot, Gemini wrapper, or basic sentiment analyzer. Every customer interaction feeds a continuously-improving organizational knowledge engine that makes the entire business smarter over time.
+Shruviq is an **Enterprise Customer Experience Intelligence Platform that transforms customer conversations into actionable business intelligence**. It is **not** a chatbot, Gemini wrapper, or basic sentiment analyzer. Every customer interaction feeds a continuously-improving organizational knowledge engine that makes the entire business smarter over time.
 
 ---
 

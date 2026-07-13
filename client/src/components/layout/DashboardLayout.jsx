@@ -175,7 +175,7 @@ export default function DashboardLayout() {
             <Volume2 className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="font-bold text-[15px] tracking-tight text-foreground">
-            Klyvora<span className="text-accent">AI</span>
+            Shruviq<span className="text-accent">AI</span>
           </span>
         </div>
 
@@ -255,7 +255,7 @@ export default function DashboardLayout() {
               <Volume2 className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="font-bold text-[15px] tracking-tight text-foreground">
-              Klyvora<span className="text-accent">AI</span>
+              Shruviq<span className="text-accent">AI</span>
             </span>
           </div>
         </div>
@@ -293,7 +293,7 @@ export default function DashboardLayout() {
                   <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shadow-lg shadow-accent/20">
                     <Volume2 className="h-4 w-4 text-white" />
                   </div>
-                  <span className="font-bold text-lg text-foreground">KlyvoraAI</span>
+                  <span className="font-bold text-lg text-foreground">Shruviq</span>
                 </div>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -365,7 +365,7 @@ export default function DashboardLayout() {
         <div className="max-w-[1280px] mx-auto px-4 md:px-8 lg:px-12 py-4 md:py-6 pb-8">
           {/* Breadcrumb - desktop only */}
           <div className="hidden md:flex items-center gap-2 mb-6">
-            <span className="text-muted-foreground text-xs font-medium">KlyvoraAI</span>
+            <span className="text-muted-foreground text-xs font-medium">Shruviq</span>
             <span className="text-muted-foreground/40 text-xs">/</span>
             <span className="text-foreground text-xs font-semibold">{currentPageLabel}</span>
           </div>

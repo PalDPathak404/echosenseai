@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('KlyvoraAI Feedback Flow Redesign', () => {
+test.describe('Shruviq Feedback Flow Redesign', () => {
   // Using a mock URL for the test since actual DB requires auth setup in tests.
   // We'll focus on testing the UI flow.
   

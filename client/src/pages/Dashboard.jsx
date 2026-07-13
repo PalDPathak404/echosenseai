@@ -83,7 +83,7 @@ export default function DashboardHome() {
   return (
     <motion.div variants={containerAnimations} initial="hidden" animate="show" className="h-full flex flex-col space-y-6">
       <Helmet>
-        <title>Analytics Dashboard | Klyvora AI</title>
+        <title>Analytics Dashboard | Shruviq</title>
       </Helmet>
 
       {/* Negative Alert Engine Banner */}

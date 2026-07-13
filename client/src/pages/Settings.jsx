@@ -90,7 +90,7 @@ export default function Settings() {
   return (
     <div className="space-y-8 max-w-4xl">
       <Helmet>
-        <title>Settings | Klyvora AI</title>
+        <title>Settings | Shruviq</title>
       </Helmet>
       <div>
         <h2 className="text-3xl font-semibold tracking-tight">Settings</h2>

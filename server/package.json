@@ -1,7 +1,7 @@
 {
-  "name": "klyvora-backend",
+  "name": "shruviq-backend",
   "version": "1.0.0",
-  "description": "Backend server for Klyvora AI",
+  "description": "Backend server for Shruviq",
   "main": "index.js",
   "type": "module",
   "scripts": {

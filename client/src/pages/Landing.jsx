@@ -51,13 +51,13 @@ export default function Landing() {
     // Increased height to 500vh to fit more content smoothly
     <div ref={containerRef} className="h-[500vh] bg-zinc-950 text-zinc-50 selection:bg-zinc-800">
       <Helmet>
-        <title>Klyvora AI | Intelligent Feedback Analysis</title>
+        <title>Shruviq | Intelligent Feedback Analysis</title>
         <meta name="description" content="Transform raw customer feedback into actionable intelligence using advanced sentiment analysis and emotional tone detection." />
-        <meta property="og:title" content="Klyvora AI | Intelligent Feedback Analysis" />
+        <meta property="og:title" content="Shruviq | Intelligent Feedback Analysis" />
         <meta property="og:description" content="Transform raw customer feedback into actionable intelligence using advanced sentiment analysis and emotional tone detection." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://klyvora.com" />
-        <meta property="og:image" content="https://klyvora.com/og-image.jpg" />
+        <meta property="og:url" content="https://shruviq.com" />
+        <meta property="og:image" content="https://shruviq.com/og-image.jpg" />
         <meta name="twitter:card" content="summary_large_image" />
       </Helmet>
       
@@ -91,7 +91,7 @@ export default function Landing() {
         >
           {/* Solid professional colors instead of gradients */}
           <h1 className="text-[12vw] tracking-tighter leading-none font-black text-zinc-100 select-none">
-            Klyvora <span className="text-zinc-500">AI</span>
+            Shruviq <span className="text-zinc-500">AI</span>
           </h1>
           
           <motion.div 
@@ -146,7 +146,7 @@ export default function Landing() {
                 </span>
               </h2>
               <p className="text-lg text-zinc-400 max-w-lg leading-relaxed font-medium">
-                Klyvora transforms raw customer voice into instantaneous, actionable intelligence using advanced vocal and sentiment analytics.
+                Shruviq is an Enterprise Customer Experience Intelligence Platform that transforms customer conversations into actionable business intelligence.
               </p>
             </div>
 

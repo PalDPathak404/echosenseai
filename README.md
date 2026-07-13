@@ -1,12 +1,12 @@
-# Klyvora AI (EchoSense)
+# Shruviq (EchoSense)
 
-Klyvora AI is an enterprise-grade customer intelligence platform that transforms raw, unstructured feedback into actionable insights. By leveraging state-of-the-art artificial intelligence models, Klyvora provides real-time sentiment analysis, emotional tone detection, and topic extraction, enabling businesses to make data-driven decisions and optimize staff performance.
+Shruviq is an Enterprise Customer Experience Intelligence Platform that transforms customer conversations into actionable business intelligence. By leveraging state-of-the-art artificial intelligence models, Shruviq provides real-time sentiment analysis, emotional tone detection, and topic extraction, enabling businesses to make data-driven decisions and optimize staff performance.
 
 ## Important Links
 
 *   **Figma Design:** [https://www.figma.com/proto/bKRdU5q74OYXJxaAXLCljD/Work?node-id=502-2&t=zXVrXeegnGTnJAcz-1&scaling=min-zoom&content-scaling=fixed&page-id=32%3A2&starting-point-node-id=503%3A128](https://www.figma.com/proto/bKRdU5q74OYXJxaAXLCljD/Work?node-id=502-2&t=zXVrXeegnGTnJAcz-1&scaling=min-zoom&content-scaling=fixed&page-id=32%3A2&starting-point-node-id=503%3A128)
-*   **Live Application:** [https://klyvora-ai.vercel.app](https://klyvora-ai.vercel.app)
-*   **Backend API Deployment:** [https://klyvora-backend.onrender.com](https://klyvora-backend.onrender.com)
+*   **Live Application:** [https://shruviq-ai.vercel.app](https://shruviq-ai.vercel.app)
+*   **Backend API Deployment:** [https://shruviq-backend.onrender.com](https://shruviq-backend.onrender.com)
 *   **Postman API Documentation:** [https://documenter.getpostman.com/view/50839228/2sBXqKofJq](https://documenter.getpostman.com/view/50839228/2sBXqKofJq)
 *   **YouTube Demonstration:** [https://youtu.be/mvJ5lRVgd9U](https://youtu.be/mvJ5lRVgd9U)
 
@@ -18,7 +18,7 @@ Businesses struggle to extract meaningful, actionable intelligence from high vol
 
 ## Solution
 
-Klyvora AI solves this by introducing a real-time, AI-driven processing pipeline. Customers can provide feedback via native voice recordings or text. The platform instantly transcribes audio and utilizes Large Language Models to analyze sentiment, detect precise emotional tones, and extract key topics. This data is immediately visualized on a comprehensive dashboard, allowing management to react instantaneously to customer satisfaction metrics.
+Shruviq solves this by introducing a real-time, AI-driven processing pipeline. Customers can provide feedback via native voice recordings or text. The platform instantly transcribes audio and utilizes Large Language Models to analyze sentiment, detect precise emotional tones, and extract key topics. This data is immediately visualized on a comprehensive dashboard, allowing management to react instantaneously to customer satisfaction metrics.
 
 ## Core Features
 

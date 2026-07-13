@@ -49,7 +49,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 selection:bg-accent/20">
       <Helmet>
-        <title>Login | Klyvora AI</title>
+        <title>Login | Shruviq</title>
       </Helmet>
       
       <div className="w-full max-w-5xl mx-auto flex flex-col md:flex-row gap-8 items-center justify-center">
@@ -60,7 +60,7 @@ export default function Login() {
             <div className="w-14 h-14 bg-blue-50 text-accent rounded-xl flex items-center justify-center mx-auto mb-5">
                <Volume2 className="h-7 w-7" />
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Klyvora AI</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-2">Shruviq</h1>
             <p className="text-[15px] text-muted-foreground font-medium">Real-time voice intelligence for modern businesses.</p>
           </div>
 
@@ -107,7 +107,7 @@ export default function Login() {
               </div>
               <div className="flex-1">
                 <h3 className="font-bold tracking-tight text-lg text-foreground mb-1">AI-Powered Speech Analytics</h3>
-                <p className="text-sm font-medium text-muted-foreground leading-relaxed">Turn customer voice recordings into structured data in seconds. Klyvora detects emotion, sentiment, and tracks critical issues automatically.</p>
+                <p className="text-sm font-medium text-muted-foreground leading-relaxed">Turn customer voice recordings into structured data in seconds. Shruviq detects emotion, sentiment, and tracks critical issues automatically.</p>
               </div>
             </div>
 

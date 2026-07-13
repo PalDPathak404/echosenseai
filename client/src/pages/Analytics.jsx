@@ -107,7 +107,7 @@ export default function Analytics() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 pb-10">
       <Helmet>
-        <title>Intelligence | Klyvora AI</title>
+        <title>Intelligence | Shruviq</title>
       </Helmet>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

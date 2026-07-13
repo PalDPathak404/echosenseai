@@ -1,73 +1,96 @@
 import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router';
+import { Link } from 'react-router';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { useOutletContext } from 'react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, ExternalLink, ShieldCheck, KeyRound, MonitorSmartphone, Heart } from 'lucide-react';
+import { Copy, ExternalLink, ShieldCheck, Paintbrush, ArrowRight, Heart, Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Helmet } from 'react-helmet-async';
+import { toast } from 'sonner';
+import { BUSINESS_TEMPLATES } from '../lib/templates';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function Settings() {
   const { businessId } = useOutletContext();
-  
-  const [kioskConfig, setKioskConfig] = useState({
-    kioskTitle: 'How was your experience?',
-    kioskMessage: 'Tap the microphone and speak briefly.',
-    collectContact: false
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [config, setConfig] = useState({
+    businessType: 'generic',
+    googleReviewLink: '',
+    voiceFeedbackRequired: 'conditional'
   });
-  const [savingKiosk, setSavingKiosk] = useState(false);
 
   useEffect(() => {
     if (!businessId) return;
-    const fetchBiz = async () => {
-      const d = await getDoc(doc(db, 'businesses', businessId));
-      if (d.exists()) {
-        const data = d.data();
-        setKioskConfig({
-          kioskTitle: data.kioskTitle || 'How was your experience?',
-          kioskMessage: data.kioskMessage || 'Tap the microphone and speak briefly.',
-          collectContact: data.collectContact || false
-        });
+    const fetchSettings = async () => {
+      try {
+        const d = await getDoc(doc(db, 'businesses', businessId));
+        if (d.exists()) {
+          const data = d.data();
+          const branding = data.branding || {};
+          setConfig({
+            businessType: branding.businessType || 'generic',
+            googleReviewLink: branding.googleReviewLink || '',
+            voiceFeedbackRequired: branding.voiceFeedbackRequired || 'conditional'
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoading(false);
       }
     };
-    fetchBiz();
+    fetchSettings();
   }, [businessId]);
 
-  const handleSaveKiosk = async () => {
-    if (!businessId) return;
-    setSavingKiosk(true);
-    try {
-      await updateDoc(doc(db, 'businesses', businessId), {
-        kioskTitle: kioskConfig.kioskTitle,
-        kioskMessage: kioskConfig.kioskMessage,
-        collectContact: kioskConfig.collectContact,
-        updatedAt: serverTimestamp()
-      });
-      // Optionally show a toast here if sonner is available
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSavingKiosk(false);
-    }
-  };
-
-  
   if (!businessId) return null;
 
   const captureUrl = `${window.location.origin}/capture/${businessId}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(captureUrl);
+    toast.success("Copied to clipboard");
+  };
+
+  const handleUpdate = (key, value) => {
+    setConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveSettings = async () => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'businesses', businessId), {
+        'branding.businessType': config.businessType,
+        'branding.googleReviewLink': config.googleReviewLink,
+        'branding.voiceFeedbackRequired': config.voiceFeedbackRequired,
+        updatedAt: serverTimestamp()
+      });
+      toast.success("Business settings saved successfully");
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="space-y-8 max-w-4xl">
       <Helmet>
-        <title>Settings | Klyvora AI</title>
+        <title>Settings | Shruviq</title>
       </Helmet>
       <div>
         <h2 className="text-3xl font-semibold tracking-tight">Settings</h2>
@@ -75,6 +98,82 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        
+        {/* Business Settings Card */}
+        <Card className="md:col-span-2 border shadow-sm">
+          <CardHeader>
+            <CardTitle>Business Configuration</CardTitle>
+            <CardDescription>
+              Select your business type to automatically apply the correct templates, AI prompts, and customer experience flow.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {loading ? (
+              <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+            ) : (
+              <>
+                <div className="space-y-2 max-w-md">
+                  <Label>Business Type</Label>
+                  <Select value={config.businessType} onValueChange={(v) => handleUpdate('businessType', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select business type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Industries</SelectLabel>
+                        {Object.values(BUSINESS_TEMPLATES).map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This changes the questions asked, the UI icon, and how the AI analyzes your feedback.
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-w-md">
+                  <Label>Google Review Link (Optional)</Label>
+                  <Input 
+                    placeholder="https://g.page/r/..." 
+                    value={config.googleReviewLink} 
+                    onChange={(e) => handleUpdate('googleReviewLink', e.target.value)} 
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    If provided, customers who leave a 5-star rating will be prompted to leave a Google Review.
+                  </p>
+                </div>
+
+                <div className="space-y-2 max-w-md">
+                  <Label>Voice Feedback Rules</Label>
+                  <Select value={config.voiceFeedbackRequired} onValueChange={(v) => handleUpdate('voiceFeedbackRequired', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select rule" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="conditional">Conditional (Required for 1-2 stars only)</SelectItem>
+                      <SelectItem value="always">Always Required</SelectItem>
+                      <SelectItem value="optional">Always Optional</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Control when customers are forced to leave voice or text feedback.
+                  </p>
+                </div>
+              </>
+            )}
+          </CardContent>
+          <CardFooter className="bg-secondary/20 justify-end border-t">
+            <Button onClick={handleSaveSettings} disabled={loading || saving} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Configuration
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Feedback Channel Card */}
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>Feedback Channel</CardTitle>
@@ -114,54 +213,30 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Kiosk Customization Card */}
-        <Card className="md:col-span-2 border shadow-sm">
-          <CardHeader className="bg-secondary/30 border-b border-border pb-4">
-            <div className="flex items-center gap-2">
-               <MonitorSmartphone className="w-5 h-5 text-muted-foreground" />
-               <CardTitle>Kiosk Customization</CardTitle>
+        {/* Branding Studio Card */}
+        <Card className="md:col-span-2 border shadow-sm overflow-hidden">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Paintbrush className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <CardTitle>Kiosk Branding Studio</CardTitle>
+                <CardDescription>Customize colors, typography, logos, and screens.</CardDescription>
+              </div>
             </div>
-            <CardDescription>
-              Personalize the feedback capture screen your customers interact with.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Greeting Title</Label>
-                <Input 
-                  value={kioskConfig.kioskTitle} 
-                  onChange={(e) => setKioskConfig(prev => ({...prev, kioskTitle: e.target.value}))}
-                  placeholder="E.g. How was your experience?" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Instruction Subtitle</Label>
-                <Input 
-                  value={kioskConfig.kioskMessage} 
-                  onChange={(e) => setKioskConfig(prev => ({...prev, kioskMessage: e.target.value}))}
-                  placeholder="E.g. Tap the microphone and speak briefly." 
-                />
-              </div>
-            </div>
-            <div className="flex items-start md:items-center justify-between p-4 border border-border rounded-lg bg-secondary/30 flex-col md:flex-row gap-4">
-              <div className="space-y-1">
-                <Label className="text-sm font-semibold">Request Customer Contact</Label>
-                <p className="text-xs text-muted-foreground w-full max-w-sm">After processing the feedback, ask customers for their email or phone number for follow-ups.</p>
-              </div>
-              <div 
-                onClick={() => setKioskConfig(prev => ({...prev, collectContact: !prev.collectContact}))}
-                className={`flex-shrink-0 h-6 w-11 rounded-full relative cursor-pointer transition-colors duration-200 border ${kioskConfig.collectContact ? 'bg-foreground border-foreground' : 'bg-secondary border-border'}`}
-              >
-                <div className={`absolute top-[2px] w-4 h-4 rounded-full bg-card transition-all duration-200 shadow-sm ${kioskConfig.collectContact ? 'left-[22px]' : 'left-[2px]'}`}></div>
-              </div>
-            </div>
+          <CardContent className="pb-6">
+            <p className="text-sm text-muted-foreground mb-4">
+              Launch the full Branding Studio to design your kiosk with a real-time live preview. 
+              Change colors, upload your logo, edit screen text, and see every change instantly.
+            </p>
+            <Link to="/branding">
+              <Button className="gap-2">
+                Open Branding Studio <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
           </CardContent>
-          <CardFooter className="bg-secondary/30 flex justify-end p-4 border-t border-border">
-            <Button onClick={handleSaveKiosk} disabled={savingKiosk} size="sm">
-              {savingKiosk ? 'Saving...' : 'Save Configuration'}
-            </Button>
-          </CardFooter>
         </Card>
 
         <Card>
@@ -218,15 +293,7 @@ export default function Settings() {
 
       <div className="pt-12 pb-4 text-center">
         <p className="text-muted-foreground text-sm font-medium tracking-wide flex items-center justify-center gap-1.5">
-          Created with <Heart className="w-4 h-4 text-red-500 fill-current" /> by{' '}
-          <a 
-            href="https://pal-pathak-sigma.vercel.app" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-foreground hover:underline hover:text-blue-600 transition-colors"
-          >
-            Pal Pathak
-          </a>
+          Made with <Heart className="w-4 h-4 text-red-500 fill-current" /> by Team Code Blooded
         </p>
       </div>
     </div>

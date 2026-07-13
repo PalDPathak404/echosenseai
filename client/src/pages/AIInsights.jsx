@@ -319,7 +319,7 @@ export default function AIInsights() {
   return (
     <motion.div variants={containerAnim} initial="hidden" animate="show" className="space-y-6 pb-10">
       <Helmet>
-        <title>AI Insights | Klyvora AI</title>
+        <title>AI Insights | Shruviq</title>
       </Helmet>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">

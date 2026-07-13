@@ -5,8 +5,174 @@ import { db } from '../lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Play, Pause, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, Pause, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Star, Lightbulb, Target } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getTemplate } from '../lib/templates';
+import { Button } from '@/components/ui/button';
+
+function ExecutiveCard({ fb, businessId, members, updateStatus, updateAssignee, playAudio, playingId, audioSource }) {
+  const [expanded, setExpanded] = useState(false);
+  const template = getTemplate(fb.businessType || 'generic');
+  const TemplateIcon = template.icon;
+  
+  const isCritical = fb.businessImpact?.level === 'Critical' || fb.urgency === 'High' || fb.rating <= 2;
+
+  return (
+    <Card className={`p-0 overflow-hidden transition-all duration-300 hover:shadow-md border-l-4 ${isCritical ? 'border-l-red-500' : 'border-l-primary'}`}>
+      {/* Top Banner */}
+      <div className="bg-secondary/40 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between border-b border-border gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center shadow-sm">
+             <TemplateIcon className="w-6 h-6 text-foreground" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-lg">{fb.emotion || '😐 Neutral'}</h3>
+              {isCritical && <Badge variant="destructive" className="animate-pulse">Critical Priority</Badge>}
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+              <span className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                {fb.rating || 3}/5
+              </span>
+              <span>•</span>
+              <span>{fb.createdAt?.toDate ? format(fb.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}</span>
+              {fb.customerContact && (
+                <>
+                  <span>•</span>
+                  <span className="font-mono">{fb.customerContact}</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+          <Select value={fb.status} onValueChange={(val) => updateStatus(fb.id, val)}>
+            <SelectTrigger className="h-9 w-[130px] text-xs font-medium">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in-progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={fb.assigneeId || 'unassigned'} onValueChange={(val) => updateAssignee(fb.id, val)}>
+            <SelectTrigger className="h-9 w-[130px] text-xs font-medium">
+              <SelectValue placeholder="Assign" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {members.map(m => (
+                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Main Body */}
+      <div className="p-6">
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-6">
+            <div>
+              <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+                 Executive Summary
+              </h4>
+              <p className="text-base leading-relaxed font-medium">
+                {fb.executiveSummary || fb.text}
+              </p>
+            </div>
+            
+            {fb.rootCause && (
+              <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-xl border border-red-100 dark:border-red-900/30">
+                <h4 className="text-xs uppercase font-bold tracking-wider text-red-600 dark:text-red-400 mb-1 flex items-center gap-2">
+                  <Target className="w-3.5 h-3.5" /> Root Cause
+                </h4>
+                <p className="text-sm text-red-900 dark:text-red-200">{fb.rootCause}</p>
+              </div>
+            )}
+
+            {fb.recommendation && fb.recommendation.length > 0 && (
+              <div>
+                <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                  <Lightbulb className="w-3.5 h-3.5" /> Recommended Actions
+                </h4>
+                <ul className="space-y-2">
+                  {fb.recommendation.map((rec, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                      <span className="text-muted-foreground">{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+               <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-2">Detected Themes</h4>
+               <div className="flex flex-wrap gap-2">
+                 {(fb.detectedCategories || fb.topics || []).map((t, i) => (
+                   <Badge key={i} variant="secondary" className="font-normal">{t}</Badge>
+                 ))}
+               </div>
+            </div>
+            
+            {fb.businessImpact && (
+              <div>
+                <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-2">Business Impact</h4>
+                <p className="text-sm">
+                   <span className="font-semibold text-foreground">{fb.businessImpact.level || 'Medium'}</span>: {fb.businessImpact.explanation}
+                </p>
+              </div>
+            )}
+
+            {fb.confidence && (
+              <div>
+                <h4 className="text-xs uppercase font-bold tracking-wider text-muted-foreground mb-1">AI Confidence</h4>
+                <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                  <div className="bg-primary h-full" style={{ width: `${fb.confidence}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Expandable Transcript & Audio */}
+        <div className="mt-8 pt-4 border-t border-border">
+          <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {expanded ? "Hide raw transcript" : "Show raw customer feedback"}
+          </button>
+          
+          {expanded && (
+            <div className="mt-4 bg-secondary/30 p-4 rounded-xl text-sm leading-relaxed border border-border">
+              {fb.audioBase64 && (
+                <div className="flex items-center gap-3 mb-3 pb-3 border-b border-border/50">
+                  <Button 
+                    size="sm"
+                    variant={playingId === fb.id ? "destructive" : "default"}
+                    onClick={() => playAudio(fb.id, fb.audioBase64)}
+                    className="gap-2 rounded-full h-8 px-4"
+                  >
+                    {playingId === fb.id ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                    {playingId === fb.id ? "Pause Audio" : "Play Original Audio"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">Original voice recording</span>
+                </div>
+              )}
+              <p className="font-mono text-muted-foreground">"{fb.text}"</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 
 export default function FeedbackList() {
   const { businessId } = useOutletContext();
@@ -56,7 +222,6 @@ export default function FeedbackList() {
       status: newStatus,
       updatedAt: serverTimestamp()
     });
-    // Refresh after update to reflect the change
     fetchData();
   };
 
@@ -99,15 +264,10 @@ export default function FeedbackList() {
         URL.revokeObjectURL(url);
       };
       
-      // Fallback if browser complains about blob url container
       audio.onerror = () => {
-         console.warn("Blob playback failed, trying raw data URI fallback");
          const fallbackAudio = new Audio(`data:audio/webm;base64,${base64}`);
          fallbackAudio.onended = () => setPlayingId(null);
-         fallbackAudio.play().catch(e => {
-            console.error("Audio playback completely failed:", e);
-            setPlayingId(null);
-         });
+         fallbackAudio.play().catch(e => setPlayingId(null));
          setAudioSource(fallbackAudio);
       };
 
@@ -115,8 +275,6 @@ export default function FeedbackList() {
       setAudioSource(audio);
       setPlayingId(id);
     } catch (err) {
-      console.error("Audio decoding error:", err);
-      // Absolute fallback
       const fallbackAudio = new Audio(`data:audio/mp3;base64,${base64}`);
       fallbackAudio.onended = () => setPlayingId(null);
       fallbackAudio.play().catch(e => setPlayingId(null));
@@ -126,15 +284,15 @@ export default function FeedbackList() {
   };
 
   if (loading) {
-    return <div className="text-sm font-medium text-muted-foreground">Loading feedback...</div>;
+    return <div className="text-sm font-medium text-muted-foreground p-8">Loading executive insights...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold tracking-tight">Feedback Inbox</h2>
-          <p className="text-muted-foreground">Manage and resolve customer experiences.</p>
+          <h2 className="text-3xl font-semibold tracking-tight">Executive Inbox</h2>
+          <p className="text-muted-foreground">Actionable insights generated from customer feedback.</p>
         </div>
         <button 
           onClick={handleRefresh}
@@ -146,100 +304,19 @@ export default function FeedbackList() {
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {feedbacks.map((fb) => (
-          <Card key={fb.id} className="p-6 transition-colors hover:bg-secondary/30">
-            <div className="flex flex-col md:flex-row md:gap-8">
-              {/* Audio & Score Column */}
-              <div className="flex-shrink-0 flex md:flex-col items-center gap-4 md:w-32 mb-4 md:mb-0 pb-4 md:pb-0 border-b md:border-b-0 md:border-r border-border">
-                <div className="text-center">
-                  <div className="text-3xl font-light leading-none">{fb.score}</div>
-                  <div className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mt-1">Score</div>
-                </div>
-                
-                {fb.audioBase64 && (
-                  <button 
-                    onClick={() => playAudio(fb.id, fb.audioBase64)}
-                    className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 transition-colors"
-                  >
-                    {playingId === fb.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-                  </button>
-                )}
-              </div>
-
-              {/* Content Column */}
-              <div className="flex-1 space-y-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={fb.sentiment === 'positive' ? 'default' : fb.sentiment === 'negative' ? 'destructive' : 'secondary'}>
-                    {fb.sentiment}
-                  </Badge>
-                  <Badge variant="outline" className="bg-transparent capitalize">{fb.emotion}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {fb.createdAt?.toDate ? format(fb.createdAt.toDate(), 'MMM d, h:mm a') : 'Just now'}
-                  </span>
-                  {fb.sentiment === 'negative' && (
-                    <span className="flex items-center text-xs text-destructive font-medium ml-auto">
-                      <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                      Critical
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <p className="text-foreground text-lg font-medium leading-relaxed">
-                    "{fb.text}"
-                  </p>
-
-                  {fb.customerContact && (
-                    <div className="flex items-center text-sm font-medium text-muted-foreground bg-secondary/50 w-fit px-3 py-1.5 rounded-md border border-border">
-                      <span className="mr-2 text-[10px] uppercase font-bold tracking-wider opacity-70">Contact:</span> 
-                      {fb.customerContact}
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {fb.topics?.map((topic) => (
-                      <span key={topic} className="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-medium uppercase tracking-wider">
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Column */}
-              <div className="flex-shrink-0 md:w-48 pl-0 md:pl-4 border-t md:border-t-0 md:border-l border-border pt-4 md:pt-0 space-y-4">
-                <div>
-                  <div className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">Status</div>
-                  <Select value={fb.status} onValueChange={(val) => updateStatus(fb.id, val)}>
-                    <SelectTrigger className="h-8 text-xs font-medium">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="open">Open</SelectItem>
-                      <SelectItem value="in-progress">In Progress</SelectItem>
-                      <SelectItem value="resolved">Resolved</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <div className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">Assignee</div>
-                  <Select value={fb.assigneeId || 'unassigned'} onValueChange={(val) => updateAssignee(fb.id, val)}>
-                    <SelectTrigger className="h-8 text-xs font-medium">
-                      <SelectValue placeholder="Assign Staff" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {members.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </Card>
+          <ExecutiveCard 
+            key={fb.id} 
+            fb={fb} 
+            businessId={businessId} 
+            members={members} 
+            updateStatus={updateStatus} 
+            updateAssignee={updateAssignee} 
+            playAudio={playAudio} 
+            playingId={playingId} 
+            audioSource={audioSource} 
+          />
         ))}
 
         {feedbacks.length === 0 && (

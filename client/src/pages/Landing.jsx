@@ -91,7 +91,7 @@ export default function Landing() {
         >
           {/* Solid professional colors instead of gradients */}
           <h1 className="text-[12vw] tracking-tighter leading-none font-black text-zinc-100 select-none">
-            Shruviq <span className="text-zinc-500">AI</span>
+            Shruviq
           </h1>
           
           <motion.div 

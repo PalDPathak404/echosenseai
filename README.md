@@ -5,7 +5,7 @@ Shruviq is an Enterprise Customer Experience Intelligence Platform that transfor
 ## Important Links
 
 *   **Figma Design:** [https://www.figma.com/proto/bKRdU5q74OYXJxaAXLCljD/Work?node-id=502-2&t=zXVrXeegnGTnJAcz-1&scaling=min-zoom&content-scaling=fixed&page-id=32%3A2&starting-point-node-id=503%3A128](https://www.figma.com/proto/bKRdU5q74OYXJxaAXLCljD/Work?node-id=502-2&t=zXVrXeegnGTnJAcz-1&scaling=min-zoom&content-scaling=fixed&page-id=32%3A2&starting-point-node-id=503%3A128)
-*   **Live Application:** [https://shruviq-ai.vercel.app](https://shruviq-ai.vercel.app)
+*   **Live Application:** [https://shruviq.vercel.app](https://shruviq.vercel.app)
 *   **Backend API Deployment:** [https://shruviq-backend.onrender.com](https://shruviq-backend.onrender.com)
 *   **Postman API Documentation:** [https://documenter.getpostman.com/view/50839228/2sBXqKofJq](https://documenter.getpostman.com/view/50839228/2sBXqKofJq)
 *   **YouTube Demonstration:** [https://youtu.be/mvJ5lRVgd9U](https://youtu.be/mvJ5lRVgd9U)

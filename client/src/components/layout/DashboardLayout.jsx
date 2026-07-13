@@ -175,7 +175,7 @@ export default function DashboardLayout() {
             <Volume2 className="h-3.5 w-3.5 text-white" />
           </div>
           <span className="font-bold text-[15px] tracking-tight text-foreground">
-            Shruviq<span className="text-accent">AI</span>
+            Shruviq
           </span>
         </div>
 
@@ -255,7 +255,7 @@ export default function DashboardLayout() {
               <Volume2 className="h-3.5 w-3.5 text-white" />
             </div>
             <span className="font-bold text-[15px] tracking-tight text-foreground">
-              Shruviq<span className="text-accent">AI</span>
+              Shruviq
             </span>
           </div>
         </div>
